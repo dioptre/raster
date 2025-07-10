@@ -138,7 +138,7 @@ class Rasterbator {
                         }
                     }
                     
-                    const radius = (1 - areaData.brightness) * maxDotRadius / 2;
+                    const radius = this.calculateDynamicRadius(areaData, maxDotRadius, config, sx, sy);
                     
                     if (radius > 0.5) {
                         // Choose color based on mode
@@ -282,6 +282,56 @@ class Rasterbator {
         // Consider it an edge if 20-80% of surrounding pixels are background
         // This indicates a transition area
         return backgroundRatio > 0.2 && backgroundRatio < 0.8;
+    }
+
+    calculateDynamicRadius(areaData, maxDotRadius, config, sx, sy) {
+        const baseBrightness = 1 - areaData.brightness;
+        let radius = baseBrightness * maxDotRadius / 2;
+        
+        if (config.dynamicSizing === 'uniform') {
+            return radius;
+        }
+        
+        const variation = (config.sizeVariation || 50) / 100;
+        
+        switch (config.dynamicSizing) {
+            case 'brightness':
+                // Enhanced brightness-based sizing with more dramatic variation
+                const brightnessFactor = Math.pow(baseBrightness, 0.7); // Gamma correction for better visual distribution
+                radius = brightnessFactor * maxDotRadius / 2;
+                break;
+                
+            case 'enhanced':
+                // Enhanced contrast with S-curve mapping
+                const enhanced = this.applySCurve(baseBrightness, 0.5, 2.0);
+                radius = enhanced * maxDotRadius / 2;
+                break;
+                
+            case 'artistic':
+                // Artistic variation with controlled randomness based on position
+                const positionSeed = (sx * 7 + sy * 13) % 100 / 100; // Deterministic pseudo-random
+                const artisticNoise = (Math.sin(positionSeed * Math.PI * 4) * 0.5 + 0.5); // Smooth noise
+                const artisticFactor = baseBrightness * (1 + artisticNoise * variation * 0.5);
+                radius = Math.min(artisticFactor * maxDotRadius / 2, maxDotRadius);
+                break;
+        }
+        
+        // Apply size variation for non-uniform modes
+        if (config.dynamicSizing !== 'uniform' && variation > 0) {
+            // Use position-based deterministic variation for consistency
+            const seed = (sx * 31 + sy * 37) % 100 / 100;
+            const variationFactor = 1 + (seed - 0.5) * variation * 0.3;
+            radius *= variationFactor;
+        }
+        
+        // Ensure radius stays within reasonable bounds
+        return Math.max(0, Math.min(radius, maxDotRadius));
+    }
+
+    applySCurve(value, midpoint = 0.5, steepness = 2.0) {
+        // S-curve function for enhanced contrast
+        const t = (value - midpoint) * steepness;
+        return midpoint + (Math.tanh(t) / Math.tanh(steepness)) * (1 - midpoint);
     }
 
     getPixelBrightness(imageData, x, y) {

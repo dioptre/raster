@@ -205,6 +205,23 @@
             </div>
             
             <div class="control-group">
+                <label for="dynamicSizing">Dynamic Dot Sizing:</label>
+                <select id="dynamicSizing">
+                    <option value="uniform">Uniform Size</option>
+                    <option value="brightness">Brightness Based</option>
+                    <option value="enhanced">Enhanced Contrast</option>
+                    <option value="artistic">Artistic Variation</option>
+                </select>
+            </div>
+            
+            <div class="control-group" id="dynamicControls" style="display: none;">
+                <label for="sizeVariation">Size Variation:</label>
+                <input type="range" id="sizeVariation" min="0" max="100" value="50">
+                <span id="variationValue">50%</span>
+                <small>How much sizes can vary</small>
+            </div>
+            
+            <div class="control-group">
                 <label for="colorMode">Color Mode:</label>
                 <select id="colorMode">
                     <option value="mono">Single Color</option>
@@ -271,10 +288,26 @@
                 document.getElementById('thresholdValue').textContent = this.value + '%';
             });
 
+            // Dynamic sizing toggle
+            document.getElementById('dynamicSizing').addEventListener('change', function() {
+                const controls = document.getElementById('dynamicControls');
+                controls.style.display = this.value !== 'uniform' ? 'block' : 'none';
+            });
+
+            // Size variation slider
+            document.getElementById('sizeVariation').addEventListener('input', function() {
+                document.getElementById('variationValue').textContent = this.value + '%';
+            });
+
             // Initialize background controls visibility on page load
             const backgroundRemoval = document.getElementById('backgroundRemoval');
-            const controls = document.getElementById('backgroundControls');
-            controls.style.display = backgroundRemoval.checked ? 'block' : 'none';
+            const backgroundControls = document.getElementById('backgroundControls');
+            backgroundControls.style.display = backgroundRemoval.checked ? 'block' : 'none';
+
+            // Initialize dynamic sizing controls visibility
+            const dynamicSizing = document.getElementById('dynamicSizing');
+            const dynamicControls = document.getElementById('dynamicControls');
+            dynamicControls.style.display = dynamicSizing.value !== 'uniform' ? 'block' : 'none';
         }
 
         function loadDefaultImage() {
@@ -480,7 +513,9 @@
                     backgroundRemoval: document.getElementById('backgroundRemoval').checked,
                     backgroundColor: document.getElementById('backgroundColor').value,
                     backgroundThreshold: parseInt(document.getElementById('backgroundThreshold').value),
-                    preserveEdges: document.getElementById('preserveEdges').checked
+                    preserveEdges: document.getElementById('preserveEdges').checked,
+                    dynamicSizing: document.getElementById('dynamicSizing').value,
+                    sizeVariation: parseInt(document.getElementById('sizeVariation').value)
                 };
 
                 generatedPages = await rasterbator.rasterize(currentImage, options);
