@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rasterbator.js - Convert Images to Dot Art</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        input, select, button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        input[type="file"] {
+            border: none;
+            padding: 4px;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .preview-section {
+            margin-top: 20px;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .pages-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .page {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: white;
+            text-align: center;
+        }
+        
+        .page canvas {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #eee;
+        }
+        
+        .page-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .status.processing {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .status.complete {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .download-all {
+            margin: 20px 0;
+            padding: 12px 24px;
+            font-size: 16px;
+            width: 100%;
+        }
+        
+        .aspect-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .pages-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Rasterbator.js</h1>
+        <p style="text-align: center; color: #666;">Convert images into dot patterns for large-scale printing</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="imageInput">Select Image:</label>
+                <input type="file" id="imageInput" accept="image/*">
+                <div class="aspect-info" id="aspectInfo"></div>
+            </div>
+            
+            <div class="control-group">
+                <label for="unitSelect">Size Units:</label>
+                <select id="unitSelect">
+                    <option value="mm">Millimeters (mm)</option>
+                    <option value="px">Pixels (px)</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="paperWidth">Paper Width:</label>
+                <input type="number" id="paperWidth" value="210" min="1">
+                <small>A4 = 210mm</small>
+            </div>
+            
+            <div class="control-group">
+                <label for="paperHeight">Paper Height:</label>
+                <input type="number" id="paperHeight" value="297" min="1">
+                <small>A4 = 297mm</small>
+            </div>
+            
+            <div class="control-group">
+                <label for="pagesWide">Pages Wide:</label>
+                <input type="number" id="pagesWide" value="1" min="1" max="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="pagesHigh">Pages High:</label>
+                <input type="number" id="pagesHigh" value="1" min="1" max="10">
+            </div>
+            
+            
+            <div class="control-group">
+                <label for="dotSize">Dot Size:</label>
+                <input type="number" id="dotSize" value="5" min="1" max="20" step="0.5">
+            </div>
+            
+            <div class="control-group">
+                <label for="colorMode">Color Mode:</label>
+                <select id="colorMode">
+                    <option value="mono">Single Color</option>
+                    <option value="multi">Multicolor (Dominant)</option>
+                    <option value="average">Average Color per Area</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="dotColor">Dot Color:</label>
+                <input type="color" id="dotColor" value="#000000">
+                <small>Used in Single Color mode</small>
+            </div>
+            
+            <div class="control-group">
+                <label for="backgroundRemoval">Background Removal:</label>
+                <input type="checkbox" id="backgroundRemoval">
+                <small>Remove background areas</small>
+            </div>
+            
+            <div class="control-group" id="backgroundControls" style="display: none;">
+                <label for="backgroundColor">Background Color:</label>
+                <input type="color" id="backgroundColor" value="#ffffff">
+                <label for="backgroundThreshold">Threshold:</label>
+                <input type="range" id="backgroundThreshold" min="0" max="100" value="20">
+                <span id="thresholdValue">20%</span>
+                <label for="preserveEdges">Preserve Edges:</label>
+                <input type="checkbox" id="preserveEdges" checked>
+                <small>Keep border areas even if they match background</small>
+            </div>
+        </div>
+        
+        <button id="renderButton" onclick="renderImage()">Render Rasterbator</button>
+        
+        <div class="preview-section">
+            <img id="imagePreview" class="image-preview" style="display: none;">
+            <div id="status"></div>
+            <button id="downloadAllButton" class="download-all" onclick="downloadAll()" style="display: none;">Download All Pages</button>
+            <div id="pagesContainer" class="pages-container"></div>
+        </div>
+    </div>
+
+    <script src="rasterbator.js"></script>
+    <script>
+        let currentImage = null;
+        let generatedPages = [];
+        const rasterbator = new Rasterbator();
+
+        // Load default image on page load
+        window.addEventListener('load', () => {
+            loadDefaultImage();
+            setupControlHandlers();
+        });
+
+        function setupControlHandlers() {
+            // Background removal toggle
+            document.getElementById('backgroundRemoval').addEventListener('change', function() {
+                const controls = document.getElementById('backgroundControls');
+                controls.style.display = this.checked ? 'block' : 'none';
+            });
+
+            // Threshold slider
+            document.getElementById('backgroundThreshold').addEventListener('input', function() {
+                document.getElementById('thresholdValue').textContent = this.value + '%';
+            });
+
+            // Initialize background controls visibility on page load
+            const backgroundRemoval = document.getElementById('backgroundRemoval');
+            const controls = document.getElementById('backgroundControls');
+            controls.style.display = backgroundRemoval.checked ? 'block' : 'none';
+        }
+
+        function loadDefaultImage() {
+            const img = new Image();
+            img.onload = function() {
+                currentImage = this;
+                document.getElementById('imagePreview').src = this.src;
+                document.getElementById('imagePreview').style.display = 'block';
+                initializeAspectRatio();
+            };
+            img.src = 'money_cat.png';
+        }
+
+        function initializeAspectRatio() {
+            if (currentImage) {
+                const aspectRatio = currentImage.height / currentImage.width;
+                const paperWidth = parseFloat(document.getElementById('paperWidth').value) || 210;
+                const paperHeight = Math.round(paperWidth * aspectRatio);
+                
+                document.getElementById('paperHeight').value = paperHeight;
+                updateAspectInfo();
+            }
+        }
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        currentImage = this;
+                        document.getElementById('imagePreview').src = this.src;
+                        document.getElementById('imagePreview').style.display = 'block';
+                        initializeAspectRatio();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function updateAspectInfo() {
+            if (currentImage) {
+                const aspectRatio = currentImage.height / currentImage.width;
+                
+                // Calculate target dimensions based on page layout
+                const pagesWide = parseInt(document.getElementById('pagesWide').value) || 1;
+                const pagesHigh = parseInt(document.getElementById('pagesHigh').value) || 1;
+                const isPixels = document.getElementById('unitSelect').value === 'px';
+                
+                let paperWidth = parseFloat(document.getElementById('paperWidth').value);
+                let paperHeight = parseFloat(document.getElementById('paperHeight').value);
+                
+                // Auto-calculate missing dimensions based on aspect ratio
+                if (!paperWidth && !paperHeight) {
+                    // Both empty - use defaults
+                    paperWidth = isPixels ? 800 : 210;
+                    paperHeight = Math.round(paperWidth * aspectRatio);
+                } else if (!paperWidth && paperHeight) {
+                    // Width empty - calculate from height
+                    paperWidth = Math.round(paperHeight / aspectRatio);
+                } else if (paperWidth && !paperHeight) {
+                    // Height empty - calculate from width
+                    paperHeight = Math.round(paperWidth * aspectRatio);
+                }
+                
+                // Calculate total canvas size
+                const totalWidth = paperWidth * pagesWide;
+                const totalHeight = paperHeight * pagesHigh;
+                const canvasAspectRatio = totalHeight / totalWidth;
+                
+                let targetWidth, targetHeight;
+                
+                // Fit image to canvas while maintaining aspect ratio
+                if (aspectRatio > canvasAspectRatio) {
+                    // Image is taller - fit to height
+                    targetHeight = isPixels ? totalHeight : Math.round(totalHeight / 25.4 * 144);
+                    targetWidth = Math.round(targetHeight / aspectRatio);
+                } else {
+                    // Image is wider - fit to width  
+                    targetWidth = isPixels ? totalWidth : Math.round(totalWidth / 25.4 * 144);
+                    targetHeight = Math.round(targetWidth * aspectRatio);
+                }
+                
+                const units = isPixels ? 'px' : 'mm';
+                document.getElementById('aspectInfo').textContent = 
+                    `Original: ${currentImage.width}x${currentImage.height}px | Canvas: ${totalWidth}x${totalHeight}${units} | Target: ${targetWidth}x${targetHeight}px`;
+            }
+        }
+
+        // Update aspect info when any relevant input changes
+        ['pagesWide', 'pagesHigh'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateAspectInfo);
+        });
+
+        // Handle paper width changes - auto-calculate height if empty
+        document.getElementById('paperWidth').addEventListener('input', function() {
+            if (currentImage && this.value && !document.getElementById('paperHeight').value) {
+                const aspectRatio = currentImage.height / currentImage.width;
+                const calculatedHeight = Math.round(parseFloat(this.value) * aspectRatio);
+                document.getElementById('paperHeight').value = calculatedHeight;
+            }
+            updateAspectInfo();
+        });
+
+        // Handle paper height changes - auto-calculate width if empty
+        document.getElementById('paperHeight').addEventListener('input', function() {
+            if (currentImage && this.value && !document.getElementById('paperWidth').value) {
+                const aspectRatio = currentImage.height / currentImage.width;
+                const calculatedWidth = Math.round(parseFloat(this.value) / aspectRatio);
+                document.getElementById('paperWidth').value = calculatedWidth;
+            }
+            updateAspectInfo();
+        });
+
+        document.getElementById('unitSelect').addEventListener('change', function() {
+            const isPixels = this.value === 'px';
+            const paperWidth = isPixels ? 800 : 210;
+            document.getElementById('paperWidth').value = paperWidth;
+            document.getElementById('dotSize').value = isPixels ? 20 : 5;
+            
+            // Calculate height based on current image aspect ratio
+            if (currentImage) {
+                const aspectRatio = currentImage.height / currentImage.width;
+                const paperHeight = Math.round(paperWidth * aspectRatio);
+                document.getElementById('paperHeight').value = paperHeight;
+            } else {
+                document.getElementById('paperHeight').value = isPixels ? 600 : 297;
+            }
+            
+            updateAspectInfo();
+        });
+
+        async function renderImage() {
+            if (!currentImage) {
+                alert('Please select an image first');
+                return;
+            }
+
+            const button = document.getElementById('renderButton');
+            const status = document.getElementById('status');
+            const container = document.getElementById('pagesContainer');
+            const downloadButton = document.getElementById('downloadAllButton');
+
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            status.innerHTML = '<div class="status processing">Generating rasterbator pages...</div>';
+            container.innerHTML = '';
+            downloadButton.style.display = 'none';
+
+            try {
+                // Calculate target dimensions based on layout
+                const aspectRatio = currentImage.height / currentImage.width;
+                const pagesWide = parseInt(document.getElementById('pagesWide').value) || 1;
+                const pagesHigh = parseInt(document.getElementById('pagesHigh').value) || 1;
+                const isPixels = document.getElementById('unitSelect').value === 'px';
+                
+                let paperWidth = parseFloat(document.getElementById('paperWidth').value);
+                let paperHeight = parseFloat(document.getElementById('paperHeight').value);
+                
+                // Auto-calculate missing dimensions based on aspect ratio
+                if (!paperWidth && !paperHeight) {
+                    // Both empty - use defaults
+                    paperWidth = isPixels ? 800 : 210;
+                    paperHeight = Math.round(paperWidth * aspectRatio);
+                } else if (!paperWidth && paperHeight) {
+                    // Width empty - calculate from height
+                    paperWidth = Math.round(paperHeight / aspectRatio);
+                } else if (paperWidth && !paperHeight) {
+                    // Height empty - calculate from width
+                    paperHeight = Math.round(paperWidth * aspectRatio);
+                }
+                
+                // Calculate total canvas size
+                const totalWidth = paperWidth * pagesWide;
+                const totalHeight = paperHeight * pagesHigh;
+                const canvasAspectRatio = totalHeight / totalWidth;
+                
+                let targetWidth, targetHeight;
+                
+                // Fit image to canvas while maintaining aspect ratio
+                if (aspectRatio > canvasAspectRatio) {
+                    // Image is taller - fit to height
+                    targetHeight = isPixels ? totalHeight : Math.round(totalHeight / 25.4 * 144);
+                    targetWidth = Math.round(targetHeight / aspectRatio);
+                } else {
+                    // Image is wider - fit to width  
+                    targetWidth = isPixels ? totalWidth : Math.round(totalWidth / 25.4 * 144);
+                    targetHeight = Math.round(targetWidth * aspectRatio);
+                }
+
+                const options = {
+                    pagesWide: pagesWide,
+                    pagesHigh: pagesHigh,
+                    paperWidth: paperWidth,
+                    paperHeight: paperHeight,
+                    targetWidth: targetWidth,
+                    dotSize: parseFloat(document.getElementById('dotSize').value),
+                    usePixels: isPixels,
+                    colorMode: document.getElementById('colorMode').value,
+                    dotColor: document.getElementById('dotColor').value,
+                    backgroundRemoval: document.getElementById('backgroundRemoval').checked,
+                    backgroundColor: document.getElementById('backgroundColor').value,
+                    backgroundThreshold: parseInt(document.getElementById('backgroundThreshold').value),
+                    preserveEdges: document.getElementById('preserveEdges').checked
+                };
+
+                generatedPages = await rasterbator.rasterize(currentImage, options);
+
+                status.innerHTML = `<div class="status complete">Generated ${generatedPages.length} pages successfully!</div>`;
+                downloadButton.style.display = 'block';
+
+                generatedPages.forEach((canvas, index) => {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'page';
+                    
+                    const pageCanvas = canvas.cloneNode(true);
+                    const ctx = pageCanvas.getContext('2d');
+                    ctx.drawImage(canvas, 0, 0);
+                    
+                    pageDiv.appendChild(pageCanvas);
+                    
+                    const info = document.createElement('div');
+                    info.className = 'page-info';
+                    info.textContent = `Page ${index + 1} (${canvas.width}x${canvas.height}px)`;
+                    pageDiv.appendChild(info);
+                    
+                    container.appendChild(pageDiv);
+                });
+
+            } catch (error) {
+                status.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+                console.error(error);
+            }
+
+            button.disabled = false;
+            button.textContent = 'Render Rasterbator';
+        }
+
+        function downloadAll() {
+            if (generatedPages.length === 0) {
+                alert('No pages to download');
+                return;
+            }
+
+            try {
+                rasterbator.downloadPages(generatedPages, 'rasterbator_page');
+            } catch (error) {
+                alert('Error downloading pages: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
