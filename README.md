@@ -4,6 +4,10 @@ Convert images into dot patterns for large-scale printing across multiple pages.
 
 ## Quick Start
 
+### GitHub Pages (Live Demo)
+Visit the live demo: [https://dioptre.github.io/rasterbator.js/](https://dioptre.github.io/rasterbator.js/)
+
+### Local Development
 ```bash
 npm start
 ```
