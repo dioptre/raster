@@ -2,6 +2,11 @@
 
 Convert images into dot patterns for large-scale printing across multiple pages.
 
+Example:
+
+<img width="486" alt="test" src="https://github.com/user-attachments/assets/dbd494ba-7cec-4698-84a3-596cdf175383" />
+
+
 ## Quick Start
 
 ### GitHub Pages (Live Demo)
